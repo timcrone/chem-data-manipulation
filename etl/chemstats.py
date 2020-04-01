@@ -45,11 +45,11 @@ class ChemStats:
         Pass the chemical data from chemloader.
 
         :param molecules: molecule data
-        :type molecules: ChemLoader
+        :type molecules: pyspark.dataframe
         """
         self.session = (pyspark.sql.SparkSession.builder
                         .appName("molecule-loader").getOrCreate())
-        self.molecule_df = molecules.molecule_df
+        self.molecule_df = molecules
 
     def count(self):
         """
@@ -82,15 +82,16 @@ class ChemStats:
 
     def pretty_features(self):
         """
-        Makes a CSV-like list of the feature combinations
+        Makes a spreadsheet-like list of the feature combinations
         present in the data.
 
-        :return: row of feature map, count, and a 1/0 CSV section
+        :return: row of feature map, count, and a 1/0
+                 pipe-delimited section suitable for Excel split
         :rtype: pyspark.dataframe
         """
         udf_features = udf(self._discrete_features, StringType())
         feature_df = self.features()
-        return feature_df.withColumn("feature_csv",
+        return feature_df.withColumn("|".join(Features.KNOWN_FEATURES),
                                      udf_features("feature_map"))
 
     @staticmethod
@@ -106,9 +107,9 @@ class ChemStats:
         out_string = ""
         for feature in Features.KNOWN_FEATURES:
             if Features.KNOWN_FEATURES[feature] & feature_map:
-                out_string += ",1"
+                out_string += "|1"
             else:
-                out_string += ',0'
+                out_string += '|0'
         return out_string[1:]
 
 
@@ -117,7 +118,7 @@ if __name__ == "__main__":
     from chemloader import ChemLoader
     logging.basicConfig(level=logging.INFO)
     # molecules = ChemLoader("/mnt/ssd2/small-molecules.tsv")
-    mols = ChemLoader("/mnt/ssd2/molecules.tsv")
+    mols = ChemLoader("/mnt/ssd2/molecules.tsv").load()
     stats = ChemStats(mols)
     # print(stats.count())
     # print(stats.describe().show())

@@ -60,26 +60,35 @@ class ChemLoader:
                "substance.mwt", "substance.logp", "purchasable",
                "reactive", "features", "tranche_name"]
 
-    def __init__(self, tree):
+    def __init__(self, source_file):
         """
         Pass the full path of a file (files.docking.org/3D) to
         start the loader.
 
-        :param tree: full path of a subtree
-        :type tree: str
+        :param source_file: full path of a subtree
+        :type source_file: str
         """
         self.session = (pyspark.sql.SparkSession.builder
                         .appName("molecule-loader").getOrCreate())
+        self.source = source_file
+        self.molecule_df = None
+
+    def load(self):
+        """
+        Loads the compound data from the instance source file.
+
+        :return: compound data frame
+        :rtype: pyspark.dataframe
+        """
         udf_features = udf(self._features, IntegerType())
-        interim_df = self.session.read.option("sep", "\t").csv(tree)
+        interim_df = self.session.read.option("sep", "\t").csv(self.source)
         self.molecule_df = (interim_df.toDF(*self.COLUMNS)
                             .withColumn("feature_map",
                                         udf_features("features")))
         basetime = time.time()
         logging.info("Initialization time: %s seconds",
                      time.time() - basetime)
-        # print(self.molecule_df.count())
-        # print(self.features(feature_map=1023))
+        return self.molecule_df
 
     @staticmethod
     def _features(feature_string):
@@ -99,7 +108,4 @@ class ChemLoader:
 if __name__ == "__main__":
     # pylint: disable=invalid-name
     logging.basicConfig(level=logging.INFO)
-    test = ChemLoader("/mnt/ssd2/molecules.tsv")
-    # test = ChemLoader("hdfs://molecules")
-    # test = ChemLoader("/mnt/ssd2/molecules.tsv")
-    # print(test.tranche)
+    test = ChemLoader("/mnt/ssd2/molecules.tsv").load()
