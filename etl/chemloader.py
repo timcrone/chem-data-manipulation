@@ -45,9 +45,9 @@ Features are one or several of:
 import logging
 import time
 import pyspark
-from features import Features
 from pyspark.sql.functions import udf
-from pyspark.sql.types import *
+from pyspark.sql.types import IntegerType
+from features import Features
 
 
 class ChemLoader:
@@ -76,7 +76,8 @@ class ChemLoader:
                             .withColumn("feature_map",
                                         udf_features("features")))
         basetime = time.time()
-        logging.info(f"Initialization time: {time.time() - basetime} seconds")
+        logging.info("Initialization time: %s seconds",
+                     time.time() - basetime)
         # print(self.molecule_df.count())
         # print(self.features(feature_map=1023))
 
@@ -84,6 +85,7 @@ class ChemLoader:
     def _features(feature_string):
         """
         Helper for UDF to get the feature map from an incoming feature string
+
         :param feature_string: feature string, comma separated
         :type feature_string: str
         :return: feature map
@@ -93,7 +95,9 @@ class ChemLoader:
             return 0
         return Features(feature_string).map()
 
+
 if __name__ == "__main__":
+    # pylint: disable=invalid-name
     logging.basicConfig(level=logging.INFO)
     test = ChemLoader("/mnt/ssd2/molecules.tsv")
     # test = ChemLoader("hdfs://molecules")

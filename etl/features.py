@@ -21,6 +21,13 @@ import logging
 
 
 class Features:
+    """
+    Defines methods for working with features and feature maps.
+
+    The class is lazy, pass in an initialization list or map
+    and the corresponding string or map representation will
+    be calculated at the necessary time.
+    """
     KNOWN_FEATURES = {
         'aggregator': 1,
         'biogenic': 2,
@@ -56,6 +63,12 @@ class Features:
             self.feature_map = feature_map
 
     def map(self):
+        """
+        Returns the mapped value of the feature list.
+
+        :return: bitmap of features in KNOWN_FEATURES
+        :rtype: int
+        """
         if self.feature_map is not None:
             pass
         elif self.feature_str is not None:
@@ -65,6 +78,12 @@ class Features:
         return self.feature_map
 
     def str(self):
+        """
+        Returns the string value of the feature list.
+
+        :return: comma-separated string of features
+        :rtype: str
+        """
         if self.feature_str is not None:
             pass
         elif self.feature_map is not None:
@@ -102,6 +121,7 @@ class Features:
 
 
 if __name__ == "__main__":
+    # pylint: disable=invalid-name
     logging.basicConfig(level=logging.INFO)
     test_string = "in-vivo,in-vitro"
     test = Features(feature_str=test_string)
