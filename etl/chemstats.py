@@ -121,5 +121,6 @@ if __name__ == "__main__":
     mols = ChemLoader("/mnt/ssd2/molecules.tsv").load()
     stats = ChemStats(mols)
     # print(stats.count())
-    # print(stats.describe().show())
+    print(stats.describe().show())
     print(stats.pretty_features().show(n=10000, truncate=False))
+

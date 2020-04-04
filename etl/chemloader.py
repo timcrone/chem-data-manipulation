@@ -46,8 +46,9 @@ import logging
 import time
 import pyspark
 from pyspark.sql.functions import udf
-from pyspark.sql.types import IntegerType
+from pyspark.sql.types import IntegerType, FloatType
 from features import Features
+from properties import Properties
 
 
 class ChemLoader:
@@ -81,10 +82,14 @@ class ChemLoader:
         :rtype: pyspark.dataframe
         """
         udf_features = udf(self._features, IntegerType())
+        udf_qed = udf(self._qed, FloatType())
         interim_df = self.session.read.option("sep", "\t").csv(self.source)
-        self.molecule_df = (interim_df.toDF(*self.COLUMNS)
-                            .withColumn("feature_map",
-                                        udf_features("features")))
+        feat_interim_df = (interim_df.toDF(*self.COLUMNS)
+                           .withColumn("feature_map",
+                                       udf_features("features")))
+        self.molecule_df = (feat_interim_df
+                            .withColumn("qed",
+                                        udf_qed("smiles")))
         basetime = time.time()
         logging.info("Initialization time: %s seconds",
                      time.time() - basetime)
@@ -93,7 +98,8 @@ class ChemLoader:
     @staticmethod
     def _features(feature_string):
         """
-        Helper for UDF to get the feature map from an incoming feature string
+        Helper for UDF to get the feature map from an incoming
+        feature string
 
         :param feature_string: feature string, comma separated
         :type feature_string: str
@@ -103,6 +109,20 @@ class ChemLoader:
         if feature_string is None:
             return 0
         return Features(feature_string).map()
+
+    @staticmethod
+    def _qed(smiles_string):
+        """
+        Helper for UDF to get the QED from the incoming SMILES
+        string.  This is super-wasteful, an improvement would be
+        to pickle the rdkit.Chem instance and store it.
+
+        :param smiles_string: SMILES string for the molecule
+        :type smiles_string: str
+        :return: QED value for the molecule
+        :rtype: double
+        """
+        return Properties(smiles_string).qed()
 
 
 if __name__ == "__main__":
