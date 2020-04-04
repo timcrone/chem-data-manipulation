@@ -49,6 +49,8 @@ from pyspark.sql.functions import udf
 from pyspark.sql.types import IntegerType, FloatType
 from features import Features
 from properties import Properties
+from rdkit import Chem
+from rdkit.Chem import QED
 
 
 class ChemLoader:
@@ -83,13 +85,13 @@ class ChemLoader:
         """
         udf_features = udf(self._features, IntegerType())
         udf_qed = udf(self._qed, FloatType())
-        interim_df = self.session.read.option("sep", "\t").csv(self.source)
-        feat_interim_df = (interim_df.toDF(*self.COLUMNS)
-                           .withColumn("feature_map",
-                                       udf_features("features")))
-        self.molecule_df = (feat_interim_df
+        self.molecule_df = (self.session.read.option("sep", "\t").csv(self.source)
+                            .toDF(*self.COLUMNS)
+                            .withColumn("feature_map",
+                                        udf_features("features"))
                             .withColumn("qed",
-                                        udf_qed("smiles")))
+                                        udf_qed("smiles"))
+                            .drop("files.db2", "features"))
         basetime = time.time()
         logging.info("Initialization time: %s seconds",
                      time.time() - basetime)
@@ -122,7 +124,9 @@ class ChemLoader:
         :return: QED value for the molecule
         :rtype: double
         """
-        return Properties(smiles_string).qed()
+        # This way is cleaner but much slower.
+        # return Properties(smiles_string).qed()
+        return QED.qed(Chem.MolFromSmiles(smiles_string))
 
 
 if __name__ == "__main__":
