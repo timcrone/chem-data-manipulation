@@ -85,13 +85,13 @@ class ChemLoader:
         """
         udf_features = udf(self._features, IntegerType())
         udf_qed = udf(self._qed, FloatType())
-        self.molecule_df = (self.session.read.option("sep", "\t").csv(self.source)
-                            .toDF(*self.COLUMNS)
-                            .withColumn("feature_map",
-                                        udf_features("features"))
-                            .withColumn("qed",
-                                        udf_qed("smiles"))
-                            .drop("files.db2", "features"))
+        interim_df = (self.session.read.option("sep", "\t").csv(self.source)
+                          .toDF(*self.COLUMNS)
+                          .withColumn("feature_map",
+                                      udf_features("features"))
+                          .withColumn("qed",
+                                      udf_qed("smiles")))
+        self.molecule_df = interim_df.drop("files.db2").drop("features")
         basetime = time.time()
         logging.info("Initialization time: %s seconds",
                      time.time() - basetime)
@@ -108,7 +108,7 @@ class ChemLoader:
         :return: feature map
         :rtype: int
         """
-        if feature_string is None:
+        if not feature_string:
             return 0
         return Features(feature_string).map()
 
@@ -124,9 +124,13 @@ class ChemLoader:
         :return: QED value for the molecule
         :rtype: double
         """
-        # This way is cleaner but much slower.
-        # return Properties(smiles_string).qed()
-        return QED.qed(Chem.MolFromSmiles(smiles_string))
+        if not smiles_string:
+            return 0
+        _property = Properties(smiles_string)
+        if _property.molecule:
+            return _property.qed()
+        else:
+            return 0
 
 
 if __name__ == "__main__":
