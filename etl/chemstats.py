@@ -29,6 +29,7 @@ Features are one or several of:
   world
 """
 
+import argparse
 import logging
 import pyspark
 from pyspark.sql.functions import udf
@@ -116,12 +117,17 @@ class ChemStats:
 if __name__ == "__main__":
     # pylint: disable=invalid-name
     from chemloader import ChemLoader
+
+    parser = argparse.ArgumentParser("Add QED and feature map to a ZINC file")
+    parser.add_argument('source', metavar="Source file name", type=str, nargs=1,
+                        help="Source file name")
+    parser.add_argument('dest', metavar="Destination path name", type=str, nargs=1,
+                        help="Destination path name")
+    parser.parse_args()
     logging.basicConfig(level=logging.INFO)
-    # molecules = ChemLoader("/mnt/ssd2/small-molecules.tsv")
-    mols = ChemLoader("/mnt/ssd2/molecules.tsv").load()
-    # mols = ChemLoader("/mnt/ssd2/small-molecules.tsv").load()
-    mols.write.csv("/mnt/ssd2/molecules-with-qed", sep="\t", header=True)
-    stats = ChemStats(mols)
+    mols = ChemLoader(parser.source).load()
+    mols.write.csv(parser.dest, sep="\t", header=True)
+    # stats = ChemStats(mols)
     # print(stats.count())
-    print(stats.describe().show())
-    print(stats.pretty_features().show(n=10000, truncate=False))
+    # print(stats.describe().show())
+    # print(stats.pretty_features().show(n=10000, truncate=False))

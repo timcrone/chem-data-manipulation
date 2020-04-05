@@ -108,7 +108,7 @@ class ChemLoader:
         :return: feature map
         :rtype: int
         """
-        if feature_string is None:
+        if not feature_string:
             return 0
         return Features(feature_string).map()
 
@@ -124,9 +124,13 @@ class ChemLoader:
         :return: QED value for the molecule
         :rtype: double
         """
-        # This way is cleaner but much slower.
-        # return Properties(smiles_string).qed()
-        return QED.qed(Chem.MolFromSmiles(smiles_string))
+        if not smiles_string:
+            return 0
+        _property = Properties(smiles_string)
+        if _property.molecule:
+            return _property.qed()
+        else:
+            return 0
 
 
 if __name__ == "__main__":
