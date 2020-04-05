@@ -118,9 +118,9 @@ if __name__ == "__main__":
     from chemloader import ChemLoader
     logging.basicConfig(level=logging.INFO)
     # molecules = ChemLoader("/mnt/ssd2/small-molecules.tsv")
-    mols = ChemLoader("/mnt/ssd2/molecules.tsv").load()
-    # mols = ChemLoader("/mnt/ssd2/small-molecules.tsv").load()
-    mols.write.csv("/mnt/ssd2/molecules-with-qed", sep="\t", header=True)
+    mols = ChemLoader("../molecules.tsv").load()
+    # mols = ChemLoader("../small-molecules.tsv").load()
+    mols.write.csv("../molecules-with-qed", sep="\t", header=True)
     stats = ChemStats(mols)
     # print(stats.count())
     print(stats.describe().show())
