@@ -85,13 +85,13 @@ class ChemLoader:
         """
         udf_features = udf(self._features, IntegerType())
         udf_qed = udf(self._qed, FloatType())
-        self.molecule_df = (self.session.read.option("sep", "\t").csv(self.source)
-                            .toDF(*self.COLUMNS)
-                            .withColumn("feature_map",
-                                        udf_features("features"))
-                            .withColumn("qed",
-                                        udf_qed("smiles"))
-                            .drop("files.db2", "features"))
+        interim_df = (self.session.read.option("sep", "\t").csv(self.source)
+                          .toDF(*self.COLUMNS)
+                          .withColumn("feature_map",
+                                      udf_features("features"))
+                          .withColumn("qed",
+                                      udf_qed("smiles")))
+        self.molecule_df = interim_df.drop("files.db2").drop("features")
         basetime = time.time()
         logging.info("Initialization time: %s seconds",
                      time.time() - basetime)

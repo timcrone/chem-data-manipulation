@@ -119,14 +119,15 @@ if __name__ == "__main__":
     from chemloader import ChemLoader
 
     parser = argparse.ArgumentParser("Add QED and feature map to a ZINC file")
-    parser.add_argument('source', metavar="Source file name", type=str, nargs=1,
+    parser.add_argument('source', metavar="source", type=str,
                         help="Source file name")
-    parser.add_argument('dest', metavar="Destination path name", type=str, nargs=1,
+    parser.add_argument('dest', metavar="destination", type=str,
                         help="Destination path name")
-    parser.parse_args()
+    args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
-    mols = ChemLoader(parser.source).load()
-    mols.write.csv(parser.dest, sep="\t", header=True)
+    mols = ChemLoader(args.source).load()
+    (mols.repartition(1).coalesce(1)
+     .write.csv(args.dest, sep="\t", header=True))
     # stats = ChemStats(mols)
     # print(stats.count())
     # print(stats.describe().show())
