@@ -1,0 +1,1 @@
+wget -A txt,html,smi --recursive -L -m -w 1 --random-wait -T 10 -t 1 -e robots=off http://files.docking.org/3D/ 
