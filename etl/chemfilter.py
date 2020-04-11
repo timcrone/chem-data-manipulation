@@ -54,7 +54,10 @@ class ChemFilter:
         :type load_path: str
         """
         self.session = (pyspark.sql.SparkSession.builder
-                        .appName("molecule-loader").getOrCreate())
+                        .appName("molecule-loader")
+                        .getOrCreate())
+                        # .master('local[*]')
+                        # .config("spark.driver.memory", "100g")
         self.path = load_path
         self.source_files = os.listdir(load_path)
         self.molecule_df = None
@@ -192,7 +195,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     mols = ChemFilter(args.source)
     mols.load()
-    mols.group_by_qed(100)
+    mols.group_by_qed(2)
     mols.write_group('qed_group', args.dest, "_qed")
     # mol_class.describe().show()
     # filtered = mol_class.select("SELECT * FROM dfTable "
