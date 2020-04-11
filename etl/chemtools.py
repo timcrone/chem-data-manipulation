@@ -11,6 +11,7 @@ import pyspark
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem, QED
 
+
 class ChemTools:
     @staticmethod
     def similarity(a, b):
@@ -30,7 +31,7 @@ class ChemTools:
         fp2 = AllChem.GetMorganFingerprintAsBitVect(b, 2,
                                                     nBits=2048,
                                                     useChirality=False)
-        return DataStructs.TanimotoSimilarity(fp1, fp2) 
+        return DataStructs.TanimotoSimilarity(fp1, fp2)
 
 
 if __name__ == "__main__":
@@ -53,4 +54,3 @@ if __name__ == "__main__":
     if mol2:
         logging.info(f"Tanimoto similarity: "
                      f"{ChemTools.similarity(mol1, mol2)}")
-
