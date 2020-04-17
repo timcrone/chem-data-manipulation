@@ -10,11 +10,28 @@ import os
 import pyspark
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem, QED
+from numba import jit, cuda
 
 
 class ChemTools:
     @staticmethod
-    def similarity(a, b):
+    @jit(forceobj=True)
+    def fingerprint(a):
+        """
+        Returns the Morgan fingerprint of a molecule
+
+        :param a: molecule to calculate
+        :type a: rdkit.molecule
+        :return: Morgan fingerprint
+        :rtype: rdkit.bitvector
+        """
+        return AllChem.GetMorganFingerprintAsBitVect(a, 2,
+                                                     nBits=2048,
+                                                     useChirality=False)
+
+    @classmethod
+    @jit(forceobj=True)
+    def similarity(cls, a, b):
         """
         Calculate Tanimoto similarity between two molecules
 
@@ -25,13 +42,25 @@ class ChemTools:
         :return: Tanimoto similarity
         :rtype: float
         """
-        fp1 = AllChem.GetMorganFingerprintAsBitVect(a, 2,
-                                                    nBits=2048,
-                                                    useChirality=False)
-        fp2 = AllChem.GetMorganFingerprintAsBitVect(b, 2,
-                                                    nBits=2048,
-                                                    useChirality=False)
-        return DataStructs.TanimotoSimilarity(fp1, fp2)
+        fp1 = cls.fingerprint(a)
+        return cls.similarity_known(fp1, b)
+
+    @classmethod
+    @jit(forceobj=True)
+    def similarity_known(cls, fp, b):
+        """
+        Calculate Tanimoto similarity between two molecules, one
+        of which already has a calculated fingerprint.
+
+        :param fp: fingerprint of first molecule
+        :type fp: rdkit.bitvector
+        :param b: second molecule
+        :type b: rdkit.molecule
+        :return: Tanimoto similarity
+        :rtype: fload
+        """
+        fp2 = cls.fingerprint(b)
+        return DataStructs.TanimotoSimilarity(fp, fp2)
 
 
 if __name__ == "__main__":
