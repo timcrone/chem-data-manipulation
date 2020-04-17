@@ -7,15 +7,12 @@ reporting.
 import argparse
 import logging
 import os
-import pyspark
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem, QED
-from numba import jit, cuda
 
 
 class ChemTools:
     @staticmethod
-    @jit(forceobj=True)
     def fingerprint(a):
         """
         Returns the Morgan fingerprint of a molecule
@@ -30,7 +27,6 @@ class ChemTools:
                                                      useChirality=False)
 
     @classmethod
-    @jit(forceobj=True)
     def similarity(cls, a, b):
         """
         Calculate Tanimoto similarity between two molecules
@@ -46,7 +42,6 @@ class ChemTools:
         return cls.similarity_known(fp1, b)
 
     @classmethod
-    @jit(forceobj=True)
     def similarity_known(cls, fp, b):
         """
         Calculate Tanimoto similarity between two molecules, one
