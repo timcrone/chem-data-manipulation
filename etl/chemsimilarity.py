@@ -1,8 +1,8 @@
 """
 SPARK VERSION
 
-This library contains tools for selecting molecules based
-on specific criteria.
+This calculates the Tanimoto similarity of a known
+compound with the rest of the ZINC database.
 
 Loads the existing data set with QED and feature mapping
 already completed.
@@ -36,165 +36,85 @@ import argparse
 import logging
 import os
 import pyspark
-from pyspark.sql.functions import udf, round
-from pyspark.sql.types import StringType
+from pyspark.sql.functions import udf, lit
+from pyspark.sql.types import FloatType
+from rdkit import Chem
+from chemfilter import ChemFilter
 from chemloader import ChemLoader
+from chemtools import ChemTools
 from features import Features
 
 
-class ChemFilter:
+class ChemSimilarity(ChemFilter):
     """
     This class pulls the overall molecule data, now that it's pretty.
     """
-    def __init__(self, load_path):
+    def __init__(self, load_path, base_molecule):
         """
         Loads the preprocessed data.
 
         :param load_path: path containing CSV source data
         :type load_path: str
+        :param base_molecule: known compound for comparison
+        :type base_molecule: rdkit.molecule
         """
-        self.session = (pyspark.sql.SparkSession.builder
-                        .appName("molecule-loader")
-                        .getOrCreate())
-        self.path = load_path
-        self.source_files = os.listdir(load_path)
-        self.molecule_df = None
+        ChemFilter.__init__(self, load_path)
+        self.base_smiles = base_molecule
+        mol = Chem.MolFromSmiles(base_molecule)
+        self.base_fp = ChemTools.fingerprint(mol)
 
-    def describe(self):
+    def similarity(self):
         """
-        Describes statistical information about the
-        whole data set.
+        Adds a similarity column to the molecules.
 
-        :return: dataframe statistics like min, max, average,...
+        Notably there is not a single similarity, each
+        set of similarities will be distinct.
+
+        :return: DataFrame with new column
         :rtype: pyspark.dataframe
         """
-        return self.molecule_df.describe()
 
-    def features(self):
-        """
-        Counts the various feature combinations present
-        in the data.
-
-        :return: row of feature map and count
-        :rtype: pyspark.dataframe
-        """
-        return self.molecule_df.groupBy('feature_map').count()
-
-    def group_by_qed(self, partitions):
-        """
-        Creates a QED score grouping with a resolutiion of
-        the passed partition.
-
-        :param partitions: number of groupings to create
-        :type partitions: int
-        :return: dataframe with 'qed_group' column
-        :rtype: pyspark.dataframe
-        """
+        udf_sim = udf(self._similarity, FloatType())
         self.molecule_df = (self.molecule_df
-                            .withColumn('qed_group',
-                                        round(self.molecule_df['qed']
-                                              * partitions)
+                            .withColumn('similarity_basis', lit(self.base_smiles)))
+        self.molecule_df = (self.molecule_df
+                            .withColumn('similarity',
+                                        udf_sim(self.molecule_df['similarity_basis'],
+                                                self.molecule_df['smiles'])
                                         )
                             )
         return self.molecule_df
 
-    def load(self):
-        """
-        Loads the data from the source_files
-
-        :return: molecules
-        :rtype: pyspark.dataframe
-        """
-        base_df = None
-        for file_name in self.source_files:
-            full_name = f"{self.path}/{file_name}"
-            logging.info(f"Loading data from {full_name}")
-            interim_df = (self.session.read.option("sep", "\t")
-                          .csv(full_name, header=True))
-            if base_df:
-                base_df = base_df.union(interim_df)
-            else:
-                base_df = interim_df
-        self.molecule_df = base_df
-        return base_df
-
-    def pretty_features(self):
-        """
-        Makes a spreadsheet-like list of the feature combinations
-        present in the data.
-
-        :return: row of feature map, count, and a 1/0
-                 pipe-delimited section suitable for Excel split
-        :rtype: pyspark.dataframe
-        """
-        udf_features = udf(self._discrete_features, StringType())
-        feature_df = self.features()
-        return feature_df.withColumn("|".join(Features.KNOWN_FEATURES),
-                                     udf_features("feature_map"))
-
-    def select(self, command):
-        """
-        Selects using a SQL command.
-
-        :param command: SQL command
-        :type command: str
-        :return: selected rows
-        :rtype: pyspark.dataframe
-        """
-        self.molecule_df.createOrReplaceTempView("dfTable")
-        result = self.session.sql(command)
-        return result
-
-    def write_group(self, group_col=None, path="", suffix=""):
-        """
-        Writes the current data frame, grouped
-        by group_col and with the path and suffix.
-
-        :param group_col: column for grouping
-        :type group_col: str
-        :param path: base path for writing
-        :type path: str
-        :param suffix: suffix for base path
-        :type suffix: str
-        """
-        (self.molecule_df.repartition(group_col)
-         .write.partitionBy(group_col).csv(f"{path}{suffix}",
-                                           sep="\t", header=True)
-         )
-
     @staticmethod
-    def _discrete_features(feature_map):
+    def _similarity(base_fp, new_smiles):
         """
-        Helper for UDF to get the feature string from an incoming feature map
+        Helper for UDF to get the Tanimoto similarity
 
-        :param feature_map: comma separated feature bits
-        :type feature_map: str
-        :return: feature str
-        :rtype: str
+        :param base_fp: known base fingerprint
+        :type base_fp: rdkit.bitvector
+        :param new_smiles: incoming SMILES string
+        :type new_smiles: str
+        :return: Tanimoto similarity
+        :rtype: float
         """
-        out_string = ""
-        for feature in Features.KNOWN_FEATURES:
-            if Features.KNOWN_FEATURES[feature] & feature_map:
-                out_string += "|1"
-            else:
-                out_string += '|0'
-        return out_string[1:]
+        return ChemTools.similarity(Chem.MolFromSmiles(base_fp),
+                                    Chem.MolFromSmiles(new_smiles))
 
 
 if __name__ == "__main__":
     # pylint: disable=invalid-name
-    parser = argparse.ArgumentParser("Load molecules from existing CSVs")
+    parser = argparse.ArgumentParser("Load molecules and calculate similarity")
+    parser.add_argument('smiles', type=str, help="Known SMILES string")
     parser.add_argument('source', metavar="source", type=str,
                         help="Source path")
     parser.add_argument('dest', metavar="dest", type=str,
                         help="Destination base filename")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
-    mols = ChemFilter(args.source)
+    mols = ChemSimilarity(args.source, args.smiles)
     mols.load()
-    # mols.group_by_qed(2)
-    # mols.write_group('qed_group', args.dest, "_qed")
-    mols.molecule_df.describe().show()
+    mols.similarity()
+    mols.write_group(f'similarity', args.dest, "_sim")
     # filtered = mol_class.select("SELECT * FROM dfTable "
     #                             "WHERE qed BETWEEN 0.39999 AND 0.4")
     # filtered.show()
