@@ -5,6 +5,7 @@ molecules.
 
 import logging
 from rdkit import Chem
+from rdkit.Chem import QED
 
 
 class Properties:
