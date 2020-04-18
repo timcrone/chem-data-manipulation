@@ -2,7 +2,9 @@
 SPARK VERSION
 
 This library contains tools for selecting molecules based
-on specific criteria.
+on specific criteria.  Manipulate the options at the end
+to determine the selection criteria, a few examples are
+included in the comments.
 
 Loads the existing data set with QED and feature mapping
 already completed.
@@ -38,7 +40,6 @@ import os
 import pyspark
 from pyspark.sql.functions import udf, round
 from pyspark.sql.types import StringType
-from chemloader import ChemLoader
 from features import Features
 
 
@@ -108,7 +109,7 @@ class ChemFilter:
         base_df = None
         for file_name in self.source_files:
             full_name = f"{self.path}/{file_name}"
-            logging.info(f"Loading data from {full_name}")
+            logging.info("Loading data from %s", full_name)
             interim_df = (self.session.read.option("sep", "\t")
                           .csv(full_name, header=True))
             if base_df:

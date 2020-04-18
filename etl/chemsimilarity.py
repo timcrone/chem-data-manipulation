@@ -34,15 +34,11 @@ Features map to one or several of:
 
 import argparse
 import logging
-import os
-import pyspark
 from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import FloatType
 from rdkit import Chem
 from chemfilter import ChemFilter
-from chemloader import ChemLoader
 from chemtools import ChemTools
-from features import Features
 
 
 class ChemSimilarity(ChemFilter):
@@ -76,11 +72,15 @@ class ChemSimilarity(ChemFilter):
 
         udf_sim = udf(self._similarity, FloatType())
         self.molecule_df = (self.molecule_df
-                            .withColumn('similarity_basis', lit(self.base_smiles)))
+                            .withColumn('similarity_basis',
+                                        lit(self.base_smiles)))
         self.molecule_df = (self.molecule_df
                             .withColumn('similarity',
-                                        udf_sim(self.molecule_df['similarity_basis'],
-                                                self.molecule_df['smiles'])
+                                        udf_sim(
+                                            self.molecule_df
+                                            ['similarity_basis'],
+                                            self.molecule_df
+                                            ['smiles'])
                                         )
                             )
         return self.molecule_df
@@ -115,19 +115,3 @@ if __name__ == "__main__":
     mols.load()
     mols.similarity()
     mols.write_group(f'similarity', args.dest, "_sim")
-    # filtered = mol_class.select("SELECT * FROM dfTable "
-    #                             "WHERE qed BETWEEN 0.39999 AND 0.4")
-    # filtered.show()
-    # for x in range(0, delta - step, step):
-    #     fx = float(x)
-    #     filtered = mol_class.select(f"SELECT * FROM dfTable "
-    #                                 f"WHERE qed BETWEEN "
-    #                                 f"{fx / fd} "
-    #                                 f"AND {(fx + fs) / fd}")
-    #     (filtered.repartition(1).coalesce(1)
-    #      .write.csv(f"{args.dest}_qed_{x}", sep="\t",
-    #      header=True))
-    # stats = ChemStats(mols)
-    # print(stats.count())
-    # print(stats.describe().show())
-    # print(stats.pretty_features().show(n=10000, truncate=False))
