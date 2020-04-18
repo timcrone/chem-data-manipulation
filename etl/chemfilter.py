@@ -56,8 +56,6 @@ class ChemFilter:
         self.session = (pyspark.sql.SparkSession.builder
                         .appName("molecule-loader")
                         .getOrCreate())
-                        # .master('local[*]')
-                        # .config("spark.driver.memory", "100g")
         self.path = load_path
         self.source_files = os.listdir(load_path)
         self.molecule_df = None
@@ -163,7 +161,6 @@ class ChemFilter:
          .write.partitionBy(group_col).csv(f"{path}{suffix}",
                                            sep="\t", header=True)
          )
-
 
     @staticmethod
     def _discrete_features(feature_map):
