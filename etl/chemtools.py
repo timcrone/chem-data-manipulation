@@ -6,56 +6,59 @@ reporting.
 
 import argparse
 import logging
-import os
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem, QED
 
 
 class ChemTools:
+    """
+    Module containing various methods for manipulating molecules
+    """
+
     @staticmethod
-    def fingerprint(a):
+    def fingerprint(mol1):
         """
         Returns the Morgan fingerprint of a molecule
 
-        :param a: molecule to calculate
-        :type a: rdkit.molecule
+        :param mol1: molecule to calculate
+        :type mol1: rdkit.molecule
         :return: Morgan fingerprint
         :rtype: rdkit.bitvector
         """
-        return AllChem.GetMorganFingerprintAsBitVect(a, 2,
+        return AllChem.GetMorganFingerprintAsBitVect(mol1, 2,
                                                      nBits=2048,
                                                      useChirality=False)
 
     @classmethod
-    def similarity(cls, a, b):
+    def similarity(cls, mol1, mol2):
         """
         Calculate Tanimoto similarity between two molecules
 
-        :param a: first molecule
-        :type a: rdkit.molecule
-        :param b: second molecule
-        :type b: rdkit.molecule
+        :param mol1: first molecule
+        :type mol1: rdkit.molecule
+        :param mol2: second molecule
+        :type mol2: rdkit.molecule
         :return: Tanimoto similarity
         :rtype: float
         """
-        fp1 = cls.fingerprint(a)
-        return cls.similarity_known(fp1, b)
+        fprint1 = cls.fingerprint(mol1)
+        return cls.similarity_known(fprint1, mol2)
 
     @classmethod
-    def similarity_known(cls, fp, b):
+    def similarity_known(cls, fprint, mol2):
         """
         Calculate Tanimoto similarity between two molecules, one
         of which already has a calculated fingerprint.
 
-        :param fp: fingerprint of first molecule
-        :type fp: rdkit.bitvector
-        :param b: second molecule
-        :type b: rdkit.molecule
+        :param fprint: fingerprint of first molecule
+        :type fprint: rdkit.bitvector
+        :param mol2: second molecule
+        :type mol2: rdkit.molecule
         :return: Tanimoto similarity
         :rtype: fload
         """
-        fp2 = cls.fingerprint(b)
-        return DataStructs.TanimotoSimilarity(fp, fp2)
+        fprint2 = cls.fingerprint(mol2)
+        return DataStructs.TanimotoSimilarity(fprint, fprint2)
 
 
 if __name__ == "__main__":
@@ -68,13 +71,13 @@ if __name__ == "__main__":
                         default='', nargs='?')
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
-    mol1 = Chem.MolFromSmiles(args.initial)
+    molecule1 = Chem.MolFromSmiles(args.initial)
     if args.target:
-        mol2 = Chem.MolFromSmiles(args.target)
+        molecule2 = Chem.MolFromSmiles(args.target)
     else:
-        mol2 = None
-    logging.info(f"QED parameters: {QED.properties(mol1)}")
-    logging.info(f"QED value: {QED.qed(mol1)}")
-    if mol2:
-        logging.info(f"Tanimoto similarity: "
-                     f"{ChemTools.similarity(mol1, mol2)}")
+        molecule2 = None
+    logging.info("QED parameters: %s", QED.properties(molecule1))
+    logging.info("QED value: %s", QED.qed(molecule1))
+    if molecule2:
+        logging.info("Tanimoto similarity: %s",
+                     ChemTools.similarity(molecule1, molecule2))

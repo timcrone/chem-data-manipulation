@@ -38,9 +38,7 @@ import argparse
 import logging
 import os
 import pyspark
-from pyspark.sql.functions import udf, round
-from pyspark.sql.types import StringType
-from features import Features
+from pyspark.sql.functions import round
 
 
 class ChemFilter:
@@ -119,20 +117,6 @@ class ChemFilter:
         self.molecule_df = base_df
         return base_df
 
-    def pretty_features(self):
-        """
-        Makes a spreadsheet-like list of the feature combinations
-        present in the data.
-
-        :return: row of feature map, count, and a 1/0
-                 pipe-delimited section suitable for Excel split
-        :rtype: pyspark.dataframe
-        """
-        udf_features = udf(self._discrete_features, StringType())
-        feature_df = self.features()
-        return feature_df.withColumn("|".join(Features.KNOWN_FEATURES),
-                                     udf_features("feature_map"))
-
     def select(self, command):
         """
         Selects using a SQL command.
@@ -163,24 +147,6 @@ class ChemFilter:
                                            sep="\t", header=True)
          )
 
-    @staticmethod
-    def _discrete_features(feature_map):
-        """
-        Helper for UDF to get the feature string from an incoming feature map
-
-        :param feature_map: comma separated feature bits
-        :type feature_map: str
-        :return: feature str
-        :rtype: str
-        """
-        out_string = ""
-        for feature in Features.KNOWN_FEATURES:
-            if Features.KNOWN_FEATURES[feature] & feature_map:
-                out_string += "|1"
-            else:
-                out_string += '|0'
-        return out_string[1:]
-
 
 if __name__ == "__main__":
     # pylint: disable=invalid-name
@@ -208,7 +174,3 @@ if __name__ == "__main__":
     #     (filtered.repartition(1).coalesce(1)
     #      .write.csv(f"{args.dest}_qed_{x}", sep="\t",
     #      header=True))
-    # stats = ChemStats(mols)
-    # print(stats.count())
-    # print(stats.describe().show())
-    # print(stats.pretty_features().show(n=10000, truncate=False))

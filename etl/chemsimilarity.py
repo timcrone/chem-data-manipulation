@@ -34,9 +34,9 @@ Features map to one or several of:
 
 import argparse
 import logging
+from rdkit import Chem
 from pyspark.sql.functions import udf, lit
 from pyspark.sql.types import FloatType
-from rdkit import Chem
 from chemfilter import ChemFilter
 from chemtools import ChemTools
 
