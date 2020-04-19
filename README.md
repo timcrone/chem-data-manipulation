@@ -65,6 +65,8 @@ __Use the gpusimilarity Docker image to calculate fingerprints for the known mol
   * It is strongly recommended to run the below in a screen session, as it will take a long while to run.
   * `wget https://bootstrap.pypa.io/get-pip.py ; python3 get-pip.py ; python3 -m pip install ipyparallel`
   * `cd /gpusimilarity/bld/python`
+  * `ipcontroller --ip=* &`
+  * `ipcluster start -n 8 &` then wait for "Engines appear to have started successfully"
   * `find /mnt/fsim/ -name \*.smi.gz -exec python3 gpusim_createdb.py {} {}.fsim \;`
   * Because this uses rdkit it is completely CPU bound.
 
