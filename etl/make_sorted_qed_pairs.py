@@ -83,7 +83,7 @@ if sys.stdin:
 
     valid[['mol1']].to_csv("data/covid_valid.txt", sep=' ', header=False, index=False)
     test[['mol1']].to_csv("data/covid_test.txt", sep=' ', header=False, index=False)
-
-    mols = df[['mol1']].values + df[['mol2']].values
+    # TODO(vg) May need to handle out of vocab values in train set
+    mols = list(train_pairs[['mol1']].values) + list(train_pairs[['mol2']].values) + list(valid[['mol1']].values) + list(test[['mol1']].values)
     pd.DataFrame(mols).drop_duplicates().to_csv("data/covid_mols.txt", sep=' ', header=False, index=False)
 
