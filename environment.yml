@@ -1,0 +1,14 @@
+name: seal_team_five
+channels:
+  - defaults
+  - rdkit 
+dependencies:
+  - python=3.6
+  - scikit-learn
+  - rdkit
+  - numpy
+  - pytorch
+  - networkx
+  - pandas
+  - pyspark
+  
