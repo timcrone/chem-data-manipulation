@@ -93,10 +93,10 @@ The output of these commands, as well as some intermediate output, is stored in 
 __Run etl/make_sorted_qed_pairs.py to sort training data and generate train/valid/test/vocab partitions.__
 
   * `python etl/make_sorted_qed_pairs.py < data/pairs`
-  Out: `data/covid_train_pairs.txt`
-  Out: `data/covid_valid.txt`
-  Out: `data/covid_test.txt`
-  Out: `data/covid_mols.txt `
+  * Out: `data/covid_train_pairs.txt`
+  * Out: `data/covid_valid.txt`
+  * Out: `data/covid_test.txt`
+  * Out: `data/covid_mols.txt`
 
 __Make custom vocabulary file.__
   * `python models/hg2g/get_vocab.py < data/covid_mols.txt > data/covid_vocab.txt`
