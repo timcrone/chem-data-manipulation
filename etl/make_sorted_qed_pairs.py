@@ -37,11 +37,18 @@ def qed(s):
     mol = Chem.MolFromSmiles(s)
     if mol is None: return 0.0
     return QED.qed(mol)
-
+bad_values = 0
 sorted_pairs = []
 if sys.stdin:
     for line in sys.stdin:
-        x,y,qed1,qed2,sim2D = line.split()
+        values = line.split(" ")
+        if len(values) == 5:
+            x,y,qed1,qed2,sim2D = values
+        else:
+            bad_values +=1
+            if bad_values < 5:
+                print(line)
+            continue
         if y == "None": y = None
         try: 
             sim2D = float(sim2D)
@@ -61,10 +68,13 @@ if sys.stdin:
         else:
             sorted_pairs.append((y,x,sim2D,qed2,qed1))
 
-
+    print(f"{bad_values} lines are bad")
     df = pd.DataFrame(sorted_pairs, columns=['mol1','mol2','sim','qed1','qed2'])
+    df = df.drop_duplicates()
+    df = df.query('sim < 1.0')
     df['qed_delta'] = df['qed2'] - df['qed1']
-    
+    # remove duplicated 
+    df.to_pickle("data/df_covid_clean-04192125.pickle")
     print('-'*50)
     print(df['sim'].describe())
     print('-'*50)
@@ -74,8 +84,8 @@ if sys.stdin:
         print(f"{len(df[df['sim']>=i])} training pairs with sim >= {round(i, 2)}")
     print('-'*50)
     # The ideal training set consists of sim >= 0.4 pairs
-    train_pairs = df.query("sim > 0.2")
-    leftovers = df.query("sim < 0.2")
+    train_pairs = df.query("sim > 0.5 and qed_delta > 0.2")
+    leftovers = df.query("sim < 0.5")
     valid = leftovers[:VAL_SIZE]
     test = leftovers[VAL_SIZE:VAL_SIZE+TEST_SIZE]
 
