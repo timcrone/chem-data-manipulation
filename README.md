@@ -1,5 +1,7 @@
 # cse6250-team5-data
-Data analysis for project team 5
+Code for project team 5
+
+To see selections of data and trained models from repository, please clone https://github.gatech.edu/tcrone3/cse6250-team5-data.git and pull the master branch.
 
 ## Introduction
 This repository contains code for preprocessing and handling the 827 million compounds in the raw ZINC data.  To generate the test, training, and chemical data for our project we used the tools in this folder in addition to standard Unix/Linux command-line stream processing tools.
