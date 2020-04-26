@@ -4,10 +4,10 @@ Data analysis for project team 5
 ## Introduction
 This repository contains code for preprocessing and handling the 827 million compounds in the raw ZINC data.  To generate the test, training, and chemical data for our project we used the tools in this folder in addition to standard Unix/Linux command-line stream processing tools.
 
-## Hardware
+## Hardware requirements
 SSDs are strongly recommended.  The system will need at least 32GB of RAM for several of these steps, a CUDA-enabled GPU for others.  Most of the chemical calculations are CPU bound due to limitations in RDKit; however all cores will be used where possible.  It is strongly recommended that an additional SSD drive is configured as a swap disk for situations where memory is exceeded.
 
-## Software
+## Software requirements
 All steps beyond the initial ZINC data download assume a Linux BASH-based environment.
 
 Python modules variously required:
@@ -21,6 +21,12 @@ In addition to this repository, you will need to load the Docker image of Schrod
 https://github.com/schrodinger/gpusimilarity/tree/master/python
 
 Because this Docker image requires CUDA integration it will need to be loaded on a Linux system with a version of Docker above 19.03, as well as the Nvidia Docker tools.  Additionally the GPU will need more than 2GB of onboard RAM.
+
+Model training was performed using NVIDIA Ti1070, 32GB of system RAM, and took about 2-3 hours per iteration.
+
+## Installation
+Use anaconda to install.
+* `conda env create -f environment.yml`
 
 ## Steps
 __Download the ZINC data from http://files.docking.org/3D/__
