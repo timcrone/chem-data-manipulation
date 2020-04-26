@@ -11,4 +11,6 @@ dependencies:
   - networkx
   - pandas
   - pyspark
+  - matplotlib
+  - seaborn
   
