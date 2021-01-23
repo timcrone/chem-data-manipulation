@@ -1,9 +1,19 @@
+# NOTE THIS DOES NOT WORK
+# For some reason there is a flipped bit that gets stuck between
+# quick reads and writes; after readAll the read queue reports cleared,
+# but the next read is corrupted.  Using the non-file-based version
+# this does not appear because QT and Python reinitialize, and we
+# were not able to fix it faster than just running the
+# stream-based version.
+# Including for future update and repair if a faster solution is
+# required.
+
 from PyQt5 import QtCore, QtNetwork
 
 import random
-from gpusim_utils import smiles_to_fingerprint_bin
 from rdkit import Chem
 from rdkit.Chem import QED
+from gpusim_utils import smiles_to_fingerprint_bin
 
 
 def parse_args():
@@ -14,7 +24,7 @@ def parse_args():
     parser.add_argument('dbname', help=".fsim file containing fingerprint "
                         "data to be searched")
     parser.add_argument('dbkey', default="", help="Key for fsim file")
-    parser.add_argument('smiles', default="CC", help="smiles string")
+    parser.add_argument('smi_file', default="covid.smi", help="SMILES file")
     return parser.parse_args()
 
 
@@ -23,17 +33,25 @@ def main():
     app = QtCore.QCoreApplication([])
 
     socket = QtNetwork.QLocalSocket(app)
-    if args.smiles:
-        i_smiles = args.smiles
-    else:
-        i_smiles = input("Smiles: ")
     dbcount = 1
     dbname = args.dbname
     dbkey = args.dbkey
     socket.connectToServer('gpusimilarity')
 
+    # precalculate QED scores
+    in_smiles = {}
+    with open(args.smi_file) as smifile:
+        lines = smifile.readlines()
+        for line in lines:
+            _smi, _id = line.split()
+            _mol = Chem.MolFromSmiles(_smi)
+            in_smiles[_smi] = {
+                    'id': _id,
+                    'qed': QED.qed(_mol)
+                    }
+
     #while smiles and smiles.lower() not in ('quit', 'exit'):
-    if True:
+    for i_smiles in in_smiles:
         return_count = 1000
         similarity_cutoff = 0.4
 
@@ -65,7 +83,7 @@ def main():
         data_reader = QtCore.QDataStream(output_qba)
         returned_request = data_reader.readInt()
         if request_num != returned_request:
-            raise RuntimeError("Incorrect result ID returned!")
+            raise RuntimeError("Incorrect result ID returned! %s %s", returned_request, request_num)
 
         return_count = data_reader.readInt()
 
@@ -76,16 +94,14 @@ def main():
         for i in range(return_count):
             scores.append(data_reader.readFloat())
 
-        i_qed = QED.qed(Chem.MolFromSmiles(i_smiles))
         for cid, smi, score in zip(ids, smiles, scores):
-            if score < similarity_cutoff or score == 1.0:
+            if score < similarity_cutoff:
                 continue
             f_smiles = smi.decode("utf-8")
-            f_qed = QED.qed(Chem.MolFromSmiles(f_smiles))
             print("{} {} {} {} {}".format(i_smiles,
                                           f_smiles,
-                                          i_qed,
-                                          f_qed,
+                                          in_smiles[i_smiles],
+                                          in_smiles[f_smiles],
                                           score))
         #smiles = input("Smiles: ")
 

@@ -107,7 +107,7 @@ class ChemStats:
         """
         out_string = ""
         for feature in Features.KNOWN_FEATURES:
-            if Features.KNOWN_FEATURES[feature] & feature_map:
+            if Features.KNOWN_FEATURES[feature] & int(feature_map):
                 out_string += "|1"
             else:
                 out_string += '|0'
@@ -125,10 +125,12 @@ if __name__ == "__main__":
                         help="Destination path name")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
-    mols = ChemLoader(args.source).load()
-    (mols.repartition(1).coalesce(1)
-     .write.csv(args.dest, sep="\t", header=True))
-    # stats = ChemStats(mols)
-    # print(stats.count())
-    # print(stats.describe().show())
-    # print(stats.pretty_features().show(n=10000, truncate=False))
+    chems = ChemLoader(args.source)
+    mols = chems.session.read.option("sep", "\t").csv(chems.source, header=True)
+
+    #(mols.repartition(1).coalesce(1)
+    # .write.csv(args.dest, sep="\t", header=True))
+    stats = ChemStats(mols)
+    print(stats.count())
+    print(stats.describe().show())
+    print(stats.pretty_features().show(n=10000, truncate=False))
