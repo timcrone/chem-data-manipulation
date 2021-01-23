@@ -4,10 +4,10 @@ Data analysis for project team 5
 ## Introduction
 This repository contains code for preprocessing and handling the 827 million compounds in the raw ZINC data.  To generate the test, training, and chemical data for our project we used the tools in this folder in addition to standard Unix/Linux command-line stream processing tools.
 
-## Hardware
+## Hardware requirements
 SSDs are strongly recommended.  The system will need at least 32GB of RAM for several of these steps, a CUDA-enabled GPU for others.  Most of the chemical calculations are CPU bound due to limitations in RDKit; however all cores will be used where possible.  It is strongly recommended that an additional SSD drive is configured as a swap disk for situations where memory is exceeded.
 
-## Software
+## Software requirements
 All steps beyond the initial ZINC data download assume a Linux BASH-based environment.
 
 Python modules variously required:
@@ -21,6 +21,12 @@ In addition to this repository, you will need to load the Docker image of Schrod
 https://github.com/schrodinger/gpusimilarity/tree/master/python
 
 Because this Docker image requires CUDA integration it will need to be loaded on a Linux system with a version of Docker above 19.03, as well as the Nvidia Docker tools.  Additionally the GPU will need more than 2GB of onboard RAM.
+
+Model training was performed using NVIDIA Ti1070, 32GB of system RAM, and took about 2-3 hours per iteration.
+
+## Installation
+Use anaconda to install.
+* `conda env create -f environment.yml`
 
 ## Steps
 __Download the ZINC data from http://files.docking.org/3D/__
@@ -89,3 +95,46 @@ __Run etl/chemfinal.py to generate the training and testing data for the graph2g
   * Since each line and pair is randomly selected, simply use `tail -n X modeldata.txt` and `head -n Y modeldata.txt` to collect training and testing data from the output.
 
 The output of these commands, as well as some intermediate output, is stored in data/*.gz
+
+__Run etl/make_sorted_qed_pairs.py to sort training data and generate train/valid/test/vocab partitions.__
+
+  * `python etl/make_sorted_qed_pairs.py < data/pairs`
+  * Out: `data/covid_train_pairs.txt`
+  * Out: `data/covid_valid.txt`
+  * Out: `data/covid_test.txt`
+  * Out: `data/covid_mols.txt`
+
+__Make custom vocabulary file.__
+  * `python models/hg2g/get_vocab.py < data/covid_mols.txt > data/covid_vocab.txt`
+
+__Preprocess raw smiles pairs into pytorch tensors.__
+  * Use G2G or HG2G scripts for respective architectures
+  * `python models/g2g/preprocess.py --train data/qed/covid_train_pairs.txt --vocab data/qed/covid_vocab.txt --ncpu 4 < data/qed/covid_train_pairs.txt`
+  * `python models/hg2g/preprocess.py --train data/qed/covid_train_pairs.txt --vocab data/qed/covid_vocab.txt --ncpu 4 < data/qed/covid_train_pairs.txt`
+
+__Train models__.
+  * HG2G: `python models/hg2g/gnn_train.py --train train_processed/ --vocab data/covid_vocab.txt --save_dir model/`
+  * G2G: `python models/g2g/diff_vae/vae_train.py --train processed/ --vocab ../data/covid_vocab.txt --save_dir model/  | tee model/train_logs`
+  * HG2G Preprocess and train:
+  *  `python get_vocab.py && python preprocess.py --train data/covid_train_pairs.txt --vocab data/covid_vocab.txt --ncpu 4 < data/covid_train_pairs.txt && mv tensors*.pkl covid_train_processed && python gnn_train.py --train covid_train_processed/ --vocab data/covid_vocab.txt --save_dir model/ --batch_size 32`
+
+__Generate model predictions.__
+  * Use G2G or HG2G scripts for respective architectures
+  * Make predictions `python models/hg2g/decode.py --test ../data/test_covid.txt --vocab ../data/covid_vocab.txt --model model/model.iter-4 --use_molatt | python ../scripts/qed_score.py > results.covid.qed`
+  * Quantify QED results `python ../scripts/qed_analyze.py < results.covid.qed`
+  * Predict + Analyze `python decode.py --test ../data/qed/train_pairs_sub.txt --vocab ../data/qed/vocab.txt --model model/model.iter-4 --use_molatt | python ../scripts/qed_score.py > results.train_sub.qed`
+  * Validate 12 models saved in `models_hg2g`: `scripts/valid_qed.sh models_hg2g/ 0 12`
+
+__Make validation figures.__
+  * input: `model/train_logs/hg2g_v3.log`
+  * input: `model/validation/covid_results_v3/`
+  * `python make_val_figure.py`
+  * Output figure in `figures`
+
+__Make comparison test figures.__
+* input target file: `data/covid.csv`
+* input predictions output 1: `model/test/covid_model_10_target_results.txt`
+* input predictions output 2: `model/test/newmodel_1_target_results.txt`
+* `python scripts/make_test_figure.py`
+* Output figures and table in `figures`
+
